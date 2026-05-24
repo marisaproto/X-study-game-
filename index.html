@@ -1,0 +1,748 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Science Review: Work & Simple Machines</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Georgia', serif;
+      background: #0a1628;
+      color: #fff;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    /* ── TITLE SCREEN ── */
+    #title-screen {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      text-align: center;
+      padding: 20px;
+    }
+    #title-screen h1 {
+      font-size: clamp(2rem, 6vw, 4rem);
+      color: #FFD700;
+      text-shadow: 0 0 20px rgba(255,215,0,0.6);
+      margin-bottom: 10px;
+      letter-spacing: 2px;
+    }
+    #title-screen h2 {
+      font-size: clamp(1rem, 3vw, 1.6rem);
+      color: #a8d4ff;
+      margin-bottom: 40px;
+    }
+    .topic-list {
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,215,0,0.3);
+      border-radius: 12px;
+      padding: 20px 30px;
+      margin-bottom: 40px;
+      text-align: left;
+      max-width: 480px;
+    }
+    .topic-list h3 { color: #FFD700; margin-bottom: 12px; font-size: 1.1rem; }
+    .topic-list li { color: #cde; margin: 6px 0; font-size: 0.95rem; line-height: 1.5; }
+
+    .play-btn {
+      background: linear-gradient(135deg, #FFD700, #FFA500);
+      color: #000;
+      border: none;
+      padding: 18px 60px;
+      font-size: 1.4rem;
+      font-weight: bold;
+      border-radius: 50px;
+      cursor: pointer;
+      letter-spacing: 2px;
+      box-shadow: 0 4px 20px rgba(255,165,0,0.5);
+      transition: transform 0.15s, box-shadow 0.15s;
+    }
+    .play-btn:hover { transform: scale(1.06); box-shadow: 0 6px 28px rgba(255,165,0,0.7); }
+
+    /* ── GAME BOARD ── */
+    #game-screen { display: none; width: 100%; max-width: 1100px; padding: 10px; }
+
+    .game-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 10px;
+    }
+    .game-header h1 { font-size: 1.4rem; color: #FFD700; }
+    .score-box {
+      background: rgba(255,215,0,0.15);
+      border: 2px solid #FFD700;
+      border-radius: 10px;
+      padding: 8px 20px;
+      text-align: center;
+    }
+    .score-box .label { font-size: 0.75rem; color: #aaa; text-transform: uppercase; }
+    .score-box .score { font-size: 1.8rem; color: #FFD700; font-weight: bold; }
+
+    .board {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 6px;
+      margin-top: 6px;
+    }
+
+    .cat-header {
+      background: linear-gradient(135deg, #1a3a6b, #0d2244);
+      border: 2px solid #2a5298;
+      border-radius: 8px;
+      padding: 14px 6px;
+      text-align: center;
+      font-size: clamp(0.65rem, 1.5vw, 0.85rem);
+      font-weight: bold;
+      color: #a8d4ff;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      min-height: 70px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .cell {
+      background: linear-gradient(135deg, #1a5276, #0e3460);
+      border: 2px solid #2980b9;
+      border-radius: 8px;
+      padding: 14px 6px;
+      text-align: center;
+      font-size: clamp(1.1rem, 2.5vw, 1.6rem);
+      font-weight: bold;
+      color: #FFD700;
+      cursor: pointer;
+      transition: transform 0.12s, background 0.12s, box-shadow 0.12s;
+      min-height: 70px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .cell:hover { transform: scale(1.04); background: linear-gradient(135deg, #2471a3, #1a5276); box-shadow: 0 4px 16px rgba(41,128,185,0.5); }
+    .cell.used {
+      background: #0d1f35;
+      border-color: #1a3a5c;
+      color: transparent;
+      cursor: default;
+      pointer-events: none;
+    }
+
+    /* ── MODAL ── */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.82);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+    .modal-overlay.open { display: flex; }
+
+    .modal {
+      background: linear-gradient(160deg, #0d2244, #071428);
+      border: 3px solid #FFD700;
+      border-radius: 16px;
+      max-width: 680px;
+      width: 100%;
+      padding: 32px;
+      position: relative;
+      box-shadow: 0 0 40px rgba(255,215,0,0.2);
+      animation: popIn 0.2s ease-out;
+    }
+    @keyframes popIn { from { transform: scale(0.85); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+    .modal-cat { font-size: 0.85rem; color: #a8d4ff; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 6px; }
+    .modal-points { font-size: 2rem; color: #FFD700; font-weight: bold; margin-bottom: 18px; }
+    .modal-question { font-size: clamp(1rem, 2.5vw, 1.25rem); line-height: 1.6; color: #fff; margin-bottom: 28px; }
+
+    .answers { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    @media (max-width: 500px) { .answers { grid-template-columns: 1fr; } }
+
+    .answer-btn {
+      background: rgba(255,255,255,0.07);
+      border: 2px solid rgba(255,255,255,0.2);
+      border-radius: 10px;
+      padding: 14px 16px;
+      color: #fff;
+      font-size: 0.95rem;
+      cursor: pointer;
+      text-align: left;
+      transition: background 0.15s, border-color 0.15s, transform 0.1s;
+      line-height: 1.4;
+    }
+    .answer-btn:hover:not(:disabled) { background: rgba(41,128,185,0.35); border-color: #2980b9; transform: translateX(3px); }
+    .answer-btn.correct { background: rgba(39,174,96,0.35); border-color: #27ae60; }
+    .answer-btn.wrong { background: rgba(231,76,60,0.35); border-color: #e74c3c; }
+    .answer-btn:disabled { cursor: default; transform: none; }
+
+    .answer-letter {
+      display: inline-block;
+      background: rgba(255,215,0,0.2);
+      color: #FFD700;
+      border-radius: 50%;
+      width: 24px;
+      height: 24px;
+      text-align: center;
+      line-height: 24px;
+      font-weight: bold;
+      font-size: 0.8rem;
+      margin-right: 8px;
+      flex-shrink: 0;
+    }
+
+    .explanation {
+      display: none;
+      margin-top: 20px;
+      background: rgba(255,255,255,0.06);
+      border-left: 4px solid #27ae60;
+      border-radius: 0 8px 8px 0;
+      padding: 14px 16px;
+      font-size: 0.9rem;
+      color: #b8e0c8;
+      line-height: 1.6;
+    }
+    .explanation.show { display: block; }
+    .explanation.wrong-exp { border-color: #e74c3c; color: #f5b8b0; }
+
+    .next-btn {
+      display: none;
+      margin-top: 20px;
+      background: linear-gradient(135deg, #FFD700, #FFA500);
+      color: #000;
+      border: none;
+      padding: 12px 36px;
+      font-size: 1rem;
+      font-weight: bold;
+      border-radius: 30px;
+      cursor: pointer;
+      letter-spacing: 1px;
+    }
+    .next-btn.show { display: inline-block; }
+    .next-btn:hover { opacity: 0.88; }
+
+    /* ── CHEAT SHEET ── */
+    #cheat-btn {
+      background: rgba(255,255,255,0.1);
+      border: 1px solid rgba(255,255,255,0.3);
+      color: #ccc;
+      padding: 6px 18px;
+      border-radius: 20px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      margin-top: 8px;
+    }
+    #cheat-btn:hover { background: rgba(255,255,255,0.18); }
+
+    #cheat-sheet {
+      display: none;
+      max-width: 700px;
+      width: 100%;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,215,0,0.2);
+      border-radius: 12px;
+      padding: 20px 24px;
+      margin: 10px 10px 20px;
+      font-size: 0.85rem;
+      line-height: 1.7;
+      color: #cde;
+    }
+    #cheat-sheet.open { display: block; }
+    #cheat-sheet h3 { color: #FFD700; margin: 12px 0 4px; font-size: 0.95rem; }
+    #cheat-sheet h3:first-child { margin-top: 0; }
+    #cheat-sheet ul { padding-left: 18px; }
+    #cheat-sheet li { margin: 3px 0; }
+    #cheat-sheet .formula {
+      background: rgba(255,215,0,0.1);
+      border: 1px solid rgba(255,215,0,0.3);
+      border-radius: 6px;
+      padding: 6px 12px;
+      font-weight: bold;
+      color: #FFD700;
+      display: inline-block;
+      margin: 4px 0;
+    }
+
+    /* ── END SCREEN ── */
+    #end-screen {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      text-align: center;
+      padding: 20px;
+    }
+    #end-screen h1 { font-size: clamp(2rem, 6vw, 3.5rem); color: #FFD700; margin-bottom: 10px; }
+    .final-score { font-size: clamp(3rem, 10vw, 6rem); color: #fff; font-weight: bold; margin: 20px 0; }
+    .score-label { font-size: 1.1rem; color: #a8d4ff; margin-bottom: 20px; }
+    .grade-msg { font-size: 1.3rem; color: #a8d4ff; margin-bottom: 30px; max-width: 480px; }
+    .replay-btn {
+      background: linear-gradient(135deg, #FFD700, #FFA500);
+      color: #000;
+      border: none;
+      padding: 16px 50px;
+      font-size: 1.2rem;
+      font-weight: bold;
+      border-radius: 50px;
+      cursor: pointer;
+      letter-spacing: 1px;
+    }
+    .replay-btn:hover { opacity: 0.88; }
+
+    .stars { font-size: 2.5rem; margin: 10px 0; }
+
+    .progress-bar-wrap {
+      width: 100%;
+      max-width: 400px;
+      background: rgba(255,255,255,0.1);
+      border-radius: 10px;
+      height: 8px;
+      margin: 10px auto 0;
+    }
+    .progress-bar {
+      height: 100%;
+      border-radius: 10px;
+      background: linear-gradient(90deg, #FFD700, #FFA500);
+      transition: width 0.3s;
+    }
+    .progress-label { font-size: 0.75rem; color: #888; text-align: right; max-width: 400px; width: 100%; margin: 4px auto 0; }
+  </style>
+</head>
+<body>
+
+<!-- TITLE SCREEN -->
+<div id="title-screen">
+  <h1>⚡ SCIENCE SHOWDOWN ⚡</h1>
+  <h2>Grade 6 · Work & Simple Machines</h2>
+  <div class="topic-list">
+    <h3>Topics Covered:</h3>
+    <ul>
+      <li>🔵 What is <strong>work</strong> in science?</li>
+      <li>🔢 Calculating work with <strong>W = F × d</strong></li>
+      <li>⚙️ <strong>Mechanical advantage</strong> & input/output force</li>
+      <li>🪨 The <strong>6 simple machines</strong> & their trade-offs</li>
+      <li>🪝 The <strong>3 classes of levers</strong></li>
+      <li>🔄 <strong>Fixed, movable</strong> & compound pulleys</li>
+    </ul>
+  </div>
+  <button class="play-btn" onclick="startGame()">▶ PLAY</button>
+</div>
+
+<!-- GAME SCREEN -->
+<div id="game-screen">
+  <div class="game-header">
+    <h1>⚡ SCIENCE SHOWDOWN</h1>
+    <div>
+      <button id="cheat-btn" onclick="toggleCheat()">📋 Formula Sheet</button>
+    </div>
+    <div class="score-box">
+      <div class="label">Score</div>
+      <div class="score" id="score-display">0</div>
+    </div>
+  </div>
+
+  <div id="cheat-sheet">
+    <h3>⚡ WORK</h3>
+    <div class="formula">W = F × d</div>
+    <ul>
+      <li>W = Work (Joules, J) &nbsp;|&nbsp; F = Force (Newtons, N) &nbsp;|&nbsp; d = distance (meters, m)</li>
+      <li>Work is done only when a force causes motion <em>in the direction of the force</em></li>
+      <li>No movement = no work (scientifically!)</li>
+    </ul>
+    <h3>⚙️ MECHANICAL ADVANTAGE</h3>
+    <div class="formula">MA = Output Force ÷ Input Force</div>
+    <div class="formula">MA = Input Distance ÷ Output Distance</div>
+    <ul>
+      <li><strong>Input force</strong> = force YOU apply (effort)</li>
+      <li><strong>Output force</strong> = force the machine applies on the load</li>
+      <li>MA &gt; 1 → machine multiplies your force (trade-off: more distance)</li>
+    </ul>
+    <h3>🪝 LEVERS</h3>
+    <ul>
+      <li><strong>Class 1:</strong> Fulcrum in the <em>middle</em> → seesaw, crowbar, scissors</li>
+      <li><strong>Class 2:</strong> Load in the <em>middle</em> → wheelbarrow, nutcracker, bottle opener</li>
+      <li><strong>Class 3:</strong> Effort in the <em>middle</em> → tweezers, fishing rod, baseball bat, broom</li>
+    </ul>
+    <h3>🔄 PULLEYS</h3>
+    <ul>
+      <li><strong>Fixed:</strong> Changes direction of force only · MA = 1 (flagpole)</li>
+      <li><strong>Movable:</strong> Attached to load · MA = 2 (half the force needed)</li>
+      <li><strong>Block & Tackle:</strong> Combined pulleys · MA = number of rope sections supporting load</li>
+    </ul>
+    <h3>🛠️ SIMPLE MACHINES & TRADE-OFFS</h3>
+    <ul>
+      <li>All simple machines: less force needed → more distance traveled (same total work)</li>
+      <li>Machines don't reduce the amount of work — they make it <em>easier</em></li>
+      <li>Inclined plane / wedge / screw = variations of the inclined plane</li>
+    </ul>
+  </div>
+
+  <div class="board" id="board"></div>
+
+  <div class="progress-bar-wrap"><div class="progress-bar" id="progress-bar" style="width:0%"></div></div>
+  <div class="progress-label" id="progress-label">0 / 25 answered</div>
+</div>
+
+<!-- QUESTION MODAL -->
+<div class="modal-overlay" id="modal">
+  <div class="modal">
+    <div class="modal-cat" id="modal-cat"></div>
+    <div class="modal-points" id="modal-points"></div>
+    <div class="modal-question" id="modal-question"></div>
+    <div class="answers" id="modal-answers"></div>
+    <div class="explanation" id="modal-explanation"></div>
+    <button class="next-btn" id="next-btn" onclick="closeModal()">BACK TO BOARD →</button>
+  </div>
+</div>
+
+<!-- END SCREEN -->
+<div id="end-screen">
+  <h1 id="end-title"></h1>
+  <div class="stars" id="end-stars"></div>
+  <div class="final-score" id="final-score"></div>
+  <div class="score-label">out of 7,500 possible points</div>
+  <div class="grade-msg" id="grade-msg"></div>
+  <button class="replay-btn" onclick="restartGame()">🔄 PLAY AGAIN</button>
+</div>
+
+<script>
+const CATEGORIES = [
+  "WHAT IS WORK?",
+  "WORK MATH",
+  "MECH. ADVANTAGE",
+  "LEVERS",
+  "PULLEYS & MORE"
+];
+
+const POINT_VALUES = [100, 200, 300, 400, 500];
+
+// questions[categoryIndex][pointIndex]
+// Each: { q, choices: [a,b,c,d], correct: 0-3, exp }
+const QUESTIONS = [
+  // ── WHAT IS WORK? ──
+  [
+    {
+      q: "In science, work is done when a force causes an object to ___.",
+      choices: ["change its color", "move in the direction of the force", "stay completely still", "get heavier"],
+      correct: 1,
+      exp: "Correct! Work = force × displacement. The motion must be in the same direction as the force applied."
+    },
+    {
+      q: "A student pushes against a brick wall with all their strength, but the wall does NOT move. How much work was done ON the wall?",
+      choices: ["A lot — she used so much force!", "A little — some energy transferred", "Zero — no movement, no work", "It depends on how long she pushed"],
+      correct: 2,
+      exp: "Zero work! Even if you're exhausted, if the object doesn't move, no scientific work is done on it."
+    },
+    {
+      q: "You carry a heavy backpack while walking down the hallway. In which direction is the force of your arms acting on the bag?",
+      choices: ["Forward (same as walking)", "Backward (opposing motion)", "Upward (against gravity)", "Downward (with gravity)"],
+      correct: 2,
+      exp: "Your arms push UP on the bag. But the motion is FORWARD — these are perpendicular, so no work is done on the bag in the direction of motion!"
+    },
+    {
+      q: "Which situation IS an example of work being done (in the scientific sense)?",
+      choices: ["Holding a textbook perfectly still for 10 minutes", "Leaning against a locker that doesn't move", "Pushing a stalled car forward 4 meters", "Sitting on a bicycle without pedaling"],
+      correct: 2,
+      exp: "Pushing the car forward 4 meters: force and motion are in the same direction — that's scientific work!"
+    },
+    {
+      q: "A book falls off a shelf and drops to the floor. Which statement is TRUE about the work done on the book?",
+      choices: ["No work is done — nothing is pushing the book", "Work is done by gravity because gravity pulls the book downward and it moves downward", "Work is done only if someone dropped it on purpose", "Work cannot be done by gravity, only by people"],
+      correct: 1,
+      exp: "Gravity exerts a downward force AND the book moves downward — same direction = work done by gravity!"
+    }
+  ],
+  // ── WORK MATH ──
+  [
+    {
+      q: "The formula for calculating work is:",
+      choices: ["W = F + d", "W = F × d", "W = F ÷ d", "W = d ÷ F"],
+      correct: 1,
+      exp: "W = F × d — Work equals Force times distance. Both must be in the same direction!"
+    },
+    {
+      q: "What is the correct unit for measuring work?",
+      choices: ["Newtons (N)", "Meters (m)", "Joules (J)", "Kilograms (kg)"],
+      correct: 2,
+      exp: "Joules (J)! One Joule = one Newton × one meter. It's named after physicist James Joule."
+    },
+    {
+      q: "You push a box with 5 Newtons of force across a floor for 4 meters. How much work did you do?",
+      choices: ["1.25 J", "9 J", "20 J", "45 J"],
+      correct: 2,
+      exp: "W = F × d = 5 N × 4 m = 20 Joules. Easy!"
+    },
+    {
+      q: "A student does 60 Joules of work moving a chair 3 meters. What force did she apply?",
+      choices: ["180 N", "63 N", "57 N", "20 N"],
+      correct: 3,
+      exp: "Rearrange W = F × d → F = W ÷ d = 60 J ÷ 3 m = 20 N."
+    },
+    {
+      q: "A worker applies 25 N of force and does 200 Joules of work. How far did the object move?",
+      choices: ["5,000 m", "175 m", "225 m", "8 m"],
+      correct: 3,
+      exp: "Rearrange W = F × d → d = W ÷ F = 200 J ÷ 25 N = 8 meters."
+    }
+  ],
+  // ── MECHANICAL ADVANTAGE ──
+  [
+    {
+      q: "Mechanical advantage tells us how much a machine multiplies or changes your ___.",
+      choices: ["speed", "input force", "weight", "distance"],
+      correct: 1,
+      exp: "MA shows how many times a machine multiplies the input (effort) force you apply."
+    },
+    {
+      q: "The force YOU apply to a machine is called the ___ force.",
+      choices: ["output", "resistance", "load", "input"],
+      correct: 3,
+      exp: "Input force = the effort force YOU put in. Output force = what the machine exerts on the load."
+    },
+    {
+      q: "The formula for mechanical advantage is:",
+      choices: ["MA = Input Force × Output Force", "MA = Output Force ÷ Input Force", "MA = Input Force ÷ Output Force", "MA = Output Force + Input Force"],
+      correct: 1,
+      exp: "MA = Output Force ÷ Input Force. If output > input, MA > 1, meaning the machine multiplies your force."
+    },
+    {
+      q: "A machine has an input force of 20 N and lifts a load with 100 N of output force. What is the mechanical advantage?",
+      choices: ["2,000", "80", "5", "0.2"],
+      correct: 2,
+      exp: "MA = Output ÷ Input = 100 N ÷ 20 N = 5. This machine multiplies your force 5 times!"
+    },
+    {
+      q: "A machine has a mechanical advantage of 4. If the output force is 200 N, what is the input force needed?",
+      choices: ["800 N", "50 N", "204 N", "196 N"],
+      correct: 1,
+      exp: "Rearrange MA = Output ÷ Input → Input = Output ÷ MA = 200 N ÷ 4 = 50 N. The machine multiplied your 50 N into 200 N!"
+    }
+  ],
+  // ── LEVERS ──
+  [
+    {
+      q: "Every lever has three parts. What are they?",
+      choices: ["Force, mass, and distance", "Effort force, load, and fulcrum", "Input, output, and machine", "Speed, work, and energy"],
+      correct: 1,
+      exp: "Effort (force you apply), Load (resistance/object being moved), and Fulcrum (the pivot point)."
+    },
+    {
+      q: "In a FIRST-CLASS lever, where is the fulcrum located?",
+      choices: ["At one end, far from the load", "Between the effort and the load", "At the same position as the load", "At the same position as the effort"],
+      correct: 1,
+      exp: "Class 1: Fulcrum is in the MIDDLE between effort and load. Think of a seesaw — the middle point is the fulcrum!"
+    },
+    {
+      q: "A seesaw, crowbar, and pair of scissors are all examples of which class lever?",
+      choices: ["First class", "Second class", "Third class", "Fourth class"],
+      correct: 0,
+      exp: "First class! The fulcrum is between the effort and the load in all of these."
+    },
+    {
+      q: "A wheelbarrow is a second-class lever. Where is the LOAD located?",
+      choices: ["At the handles (where you push)", "At the wheel (the fulcrum end)", "Between the wheel and the handles", "On top of the handles"],
+      correct: 2,
+      exp: "Class 2: Load is in the MIDDLE. Wheel = fulcrum at one end, you push at the other end, and the dirt/load is in between."
+    },
+    {
+      q: "In a THIRD-CLASS lever, where is the EFFORT force applied?",
+      choices: ["At the far end from the fulcrum", "At the fulcrum itself", "Between the fulcrum and the load", "Directly on the load"],
+      correct: 2,
+      exp: "Class 3: Effort is in the MIDDLE between fulcrum and load. Examples: tweezers, baseball bat, fishing rod, broom. These increase speed & distance instead of force."
+    }
+  ],
+  // ── PULLEYS & MORE ──
+  [
+    {
+      q: "A FIXED pulley is attached to the ceiling and does NOT move. What does it do?",
+      choices: ["Doubles your force (MA = 2)", "Changes the DIRECTION of your force only — MA = 1", "Triples your force (MA = 3)", "Eliminates the need for force"],
+      correct: 1,
+      exp: "A fixed pulley only changes direction — you pull DOWN to lift something UP. MA = 1, so the force is the same, but direction is more convenient."
+    },
+    {
+      q: "A MOVABLE pulley is attached to the load itself (not the ceiling). What is its mechanical advantage?",
+      choices: ["MA = 1 (no advantage)", "MA = 2 (half the force needed)", "MA = 4", "MA = 10"],
+      correct: 1,
+      exp: "A movable pulley has MA = 2! Two rope sections support the load, so you only need half the force. Trade-off: you must pull twice the distance."
+    },
+    {
+      q: "When you use a simple machine that reduces the force needed to do work, what is the TRADE-OFF?",
+      choices: ["Less total work is done", "The object gets lighter", "You must apply force over a greater distance", "The machine stores extra energy"],
+      correct: 2,
+      exp: "The total work stays the same! Less force × more distance = same work. Machines redistribute force and distance, they don't reduce work."
+    },
+    {
+      q: "A ramp (inclined plane) makes it easier to push a couch up to a truck. Compared to lifting it straight up, what is the trade-off of using the ramp?",
+      choices: ["You do less total work", "The couch travels a longer distance along the ramp", "You need to push harder", "The couch weighs less on the ramp"],
+      correct: 1,
+      exp: "The ramp lets you use less force, but the couch travels a longer distance along the slope. Work = Force × distance remains the same!"
+    },
+    {
+      q: "A block and tackle pulley system has 4 rope sections supporting the load. What is the mechanical advantage?",
+      choices: ["1", "2", "4", "8"],
+      correct: 2,
+      exp: "For a block and tackle, MA = number of rope sections supporting the load. 4 ropes = MA of 4, so you only need 1/4 of the force!"
+    }
+  ]
+];
+
+let score = 0;
+let answered = 0;
+let totalQuestions = 25;
+let used = Array.from({length: 5}, () => Array(5).fill(false));
+let currentCell = null;
+
+function startGame() {
+  document.getElementById('title-screen').style.display = 'none';
+  document.getElementById('game-screen').style.display = 'block';
+  buildBoard();
+}
+
+function buildBoard() {
+  const board = document.getElementById('board');
+  board.innerHTML = '';
+  // Category headers
+  CATEGORIES.forEach(cat => {
+    const h = document.createElement('div');
+    h.className = 'cat-header';
+    h.textContent = cat;
+    board.appendChild(h);
+  });
+  // Cells
+  POINT_VALUES.forEach((pts, ri) => {
+    CATEGORIES.forEach((_, ci) => {
+      const cell = document.createElement('div');
+      cell.className = 'cell' + (used[ci][ri] ? ' used' : '');
+      cell.textContent = used[ci][ri] ? '' : '$' + pts;
+      cell.dataset.cat = ci;
+      cell.dataset.row = ri;
+      if (!used[ci][ri]) cell.onclick = () => openQuestion(ci, ri);
+      board.appendChild(cell);
+    });
+  });
+}
+
+function openQuestion(ci, ri) {
+  currentCell = {ci, ri};
+  const q = QUESTIONS[ci][ri];
+  const pts = POINT_VALUES[ri];
+
+  document.getElementById('modal-cat').textContent = CATEGORIES[ci];
+  document.getElementById('modal-points').textContent = '$' + pts;
+  document.getElementById('modal-question').textContent = q.q;
+
+  const answersDiv = document.getElementById('modal-answers');
+  answersDiv.innerHTML = '';
+  const letters = ['A', 'B', 'C', 'D'];
+  q.choices.forEach((choice, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'answer-btn';
+    btn.innerHTML = `<span class="answer-letter">${letters[i]}</span>${choice}`;
+    btn.onclick = () => selectAnswer(i, q.correct, q.exp, pts);
+    answersDiv.appendChild(btn);
+  });
+
+  document.getElementById('modal-explanation').className = 'explanation';
+  document.getElementById('modal-explanation').textContent = '';
+  document.getElementById('next-btn').className = 'next-btn';
+
+  document.getElementById('modal').classList.add('open');
+}
+
+function selectAnswer(chosen, correct, exp, pts) {
+  const buttons = document.querySelectorAll('.answer-btn');
+  buttons.forEach(b => b.disabled = true);
+
+  buttons[chosen].classList.add(chosen === correct ? 'correct' : 'wrong');
+  if (chosen !== correct) buttons[correct].classList.add('correct');
+
+  const expDiv = document.getElementById('modal-explanation');
+  expDiv.textContent = (chosen === correct ? '✅ ' : '❌ Correct answer: ' + ['A','B','C','D'][correct] + ' — ') + exp;
+  expDiv.className = 'explanation show' + (chosen !== correct ? ' wrong-exp' : '');
+
+  if (chosen === correct) {
+    score += pts;
+    document.getElementById('score-display').textContent = score.toLocaleString();
+  }
+
+  document.getElementById('next-btn').className = 'next-btn show';
+
+  used[currentCell.ci][currentCell.ri] = true;
+  answered++;
+  updateProgress();
+}
+
+function closeModal() {
+  document.getElementById('modal').classList.remove('open');
+  buildBoard();
+  if (answered >= totalQuestions) {
+    setTimeout(showEndScreen, 300);
+  }
+}
+
+function updateProgress() {
+  const pct = (answered / totalQuestions) * 100;
+  document.getElementById('progress-bar').style.width = pct + '%';
+  document.getElementById('progress-label').textContent = answered + ' / ' + totalQuestions + ' answered';
+}
+
+function showEndScreen() {
+  document.getElementById('game-screen').style.display = 'none';
+  const end = document.getElementById('end-screen');
+  end.style.display = 'flex';
+
+  const max = 7500;
+  const pct = score / max;
+
+  let title, stars, msg;
+  if (pct >= 0.9) { title = "SCIENCE GENIUS!"; stars = "⭐⭐⭐⭐⭐"; msg = "Outstanding! You have mastered work, mechanical advantage, and simple machines. That test is going to be a breeze!"; }
+  else if (pct >= 0.75) { title = "GREAT JOB!"; stars = "⭐⭐⭐⭐"; msg = "Really solid performance! Review a couple of the harder questions and you'll be ready to ace that test."; }
+  else if (pct >= 0.55) { title = "GOOD EFFORT!"; stars = "⭐⭐⭐"; msg = "Nice work! Spend a little time with the formula sheet — especially W = F × d and MA = Output ÷ Input — and you've got this."; }
+  else if (pct >= 0.35) { title = "KEEP STUDYING!"; stars = "⭐⭐"; msg = "Good start! Review the formula sheet and try again. The more you practice, the easier it gets."; }
+  else { title = "LET'S REVIEW!"; stars = "⭐"; msg = "No worries! Use the Formula Sheet button and go through each topic. Play again — you'll improve fast!"; }
+
+  document.getElementById('end-title').textContent = title;
+  document.getElementById('end-stars').textContent = stars;
+  document.getElementById('final-score').textContent = score.toLocaleString();
+  document.getElementById('grade-msg').textContent = msg;
+}
+
+function restartGame() {
+  score = 0;
+  answered = 0;
+  used = Array.from({length: 5}, () => Array(5).fill(false));
+  currentCell = null;
+  document.getElementById('score-display').textContent = '0';
+  document.getElementById('end-screen').style.display = 'none';
+  document.getElementById('game-screen').style.display = 'block';
+  document.getElementById('cheat-sheet').className = '';
+  updateProgress();
+  buildBoard();
+}
+
+function toggleCheat() {
+  const sheet = document.getElementById('cheat-sheet');
+  sheet.classList.toggle('open');
+  document.getElementById('cheat-btn').textContent = sheet.classList.contains('open') ? '📋 Hide Sheet' : '📋 Formula Sheet';
+}
+
+// Close modal on overlay click
+document.getElementById('modal').addEventListener('click', function(e) {
+  if (e.target === this) {
+    const nextBtn = document.getElementById('next-btn');
+    if (nextBtn.classList.contains('show')) closeModal();
+  }
+});
+</script>
+</body>
+</html>
