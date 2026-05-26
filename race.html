@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Science Race! 🏎️</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Arial', sans-serif;
+      background: #0f0e17;
+      color: #fff;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* ── SCREENS ── */
+    .screen { display: none; width: 100%; max-width: 780px; padding: 16px; flex-direction: column; align-items: center; }
+    .screen.active { display: flex; }
+
+    /* ── START ── */
+    #start { text-align: center; justify-content: center; min-height: 100vh; }
+    #start h1 { font-size: clamp(2.5rem, 8vw, 4rem); color: #FFD700; text-shadow: 0 0 24px rgba(255,215,0,0.5); letter-spacing: 3px; margin-bottom: 6px; }
+    #start h2 { color: #a8d4ff; font-size: 1rem; margin-bottom: 28px; letter-spacing: 1px; }
+
+    .how-to {
+      background: rgba(255,255,255,0.07);
+      border: 1px solid rgba(255,215,0,0.3);
+      border-radius: 12px;
+      padding: 18px 22px;
+      margin-bottom: 28px;
+      max-width: 460px;
+      text-align: left;
+    }
+    .how-to h3 { color: #FFD700; margin-bottom: 10px; font-size: 1rem; }
+    .how-to li { color: #cde; margin: 7px 0; font-size: 0.88rem; line-height: 1.5; }
+
+    .start-btn {
+      background: linear-gradient(135deg, #e74c3c, #c0392b);
+      color: #fff;
+      border: none;
+      padding: 18px 62px;
+      font-size: 1.4rem;
+      font-weight: bold;
+      border-radius: 50px;
+      cursor: pointer;
+      letter-spacing: 2px;
+      box-shadow: 0 4px 22px rgba(231,76,60,0.55);
+      transition: transform 0.15s;
+    }
+    .start-btn:hover { transform: scale(1.06); }
+
+    /* ── GAME ── */
+    #game { padding: 10px 12px 20px; }
+
+    .game-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      width: 100%;
+      margin-bottom: 8px;
+    }
+    .q-count { font-size: 0.85rem; color: #aaa; }
+    .q-count span { color: #FFD700; font-weight: bold; font-size: 1rem; }
+    .game-title-sm { font-size: 0.9rem; color: #666; letter-spacing: 1px; }
+    .score-pill {
+      background: rgba(255,215,0,0.12);
+      border: 1px solid rgba(255,215,0,0.4);
+      border-radius: 20px;
+      padding: 4px 14px;
+      font-size: 0.85rem;
+      color: #FFD700;
+    }
+
+    /* ── CANVAS ── */
+    #track { display: block; width: 100%; border-radius: 10px; }
+
+    /* ── TIMER BAR ── */
+    .timer-wrap { width: 100%; height: 7px; background: rgba(255,255,255,0.1); border-radius: 6px; margin: 7px 0; overflow: hidden; }
+    #timer-bar { height: 100%; width: 100%; border-radius: 6px; background: #27ae60; transition: background 0.4s; }
+
+    /* ── QUESTION CARD ── */
+    .q-card {
+      width: 100%;
+      background: linear-gradient(155deg, #1a1a40, #0f0e28);
+      border: 2px solid #FFD700;
+      border-radius: 14px;
+      padding: 18px 22px;
+      margin: 8px 0 10px;
+    }
+    .q-badge { font-size: 0.7rem; color: #a8d4ff; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 6px; }
+    .q-text { font-size: clamp(0.9rem, 2.2vw, 1.05rem); line-height: 1.65; color: #f0f0f0; }
+
+    /* ── ANSWER BUTTONS ── */
+    .ans-grid { width: 100%; display: grid; gap: 9px; }
+    .ans-grid.g2 { grid-template-columns: 1fr 1fr; }
+    .ans-grid.g4 { grid-template-columns: 1fr 1fr; }
+
+    .ans-btn {
+      background: rgba(255,255,255,0.06);
+      border: 2px solid rgba(255,255,255,0.18);
+      border-radius: 10px;
+      padding: 13px 14px;
+      color: #fff;
+      font-size: clamp(0.8rem, 2vw, 0.9rem);
+      cursor: pointer;
+      text-align: left;
+      display: flex;
+      align-items: flex-start;
+      gap: 9px;
+      line-height: 1.4;
+      transition: background 0.12s, border-color 0.12s, transform 0.1s;
+    }
+    .ans-btn:hover:not(:disabled) { background: rgba(41,128,185,0.28); border-color: #3498db; transform: translateY(-2px); }
+    .ans-btn.correct { background: rgba(39,174,96,0.38) !important; border-color: #27ae60 !important; }
+    .ans-btn.wrong   { background: rgba(231,76,60,0.38)  !important; border-color: #e74c3c !important; }
+    .ans-btn:disabled { cursor: default; transform: none !important; }
+
+    .lbl {
+      background: rgba(255,215,0,0.18);
+      color: #FFD700;
+      border-radius: 50%;
+      min-width: 24px;
+      height: 24px;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: bold; font-size: 0.75rem;
+      flex-shrink: 0;
+    }
+
+    /* ── FEEDBACK ── */
+    #feedback {
+      width: 100%;
+      padding: 10px 16px;
+      border-radius: 10px;
+      font-size: 0.88rem;
+      line-height: 1.5;
+      margin-top: 8px;
+      opacity: 0;
+      transition: opacity 0.2s;
+      min-height: 42px;
+    }
+    #feedback.show { opacity: 1; }
+    #feedback.ok  { background: rgba(39,174,96,0.22); color: #2ecc71; border: 1px solid #27ae60; }
+    #feedback.bad { background: rgba(231,76,60,0.22);  color: #e74c3c; border: 1px solid #c0392b; }
+
+    /* ── END SCREEN ── */
+    #end { text-align: center; min-height: 100vh; justify-content: center; }
+    .end-icon { font-size: 4rem; margin-bottom: 8px; }
+    #end h1 { font-size: clamp(2rem, 7vw, 3.2rem); color: #FFD700; margin-bottom: 8px; }
+    .end-sub { font-size: clamp(0.88rem, 2.5vw, 1.05rem); color: #a8d4ff; max-width: 480px; line-height: 1.6; margin-bottom: 24px; }
+
+    .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; max-width: 420px; width: 100%; margin-bottom: 28px; }
+    .stat { background: rgba(255,255,255,0.07); border: 1px solid rgba(255,215,0,0.25); border-radius: 10px; padding: 14px 8px; }
+    .stat-n { font-size: 1.9rem; font-weight: bold; color: #FFD700; }
+    .stat-l { font-size: 0.72rem; color: #999; margin-top: 3px; }
+
+    .replay-btn {
+      background: linear-gradient(135deg, #e74c3c, #c0392b);
+      color: #fff; border: none;
+      padding: 14px 50px; font-size: 1.1rem; font-weight: bold;
+      border-radius: 40px; cursor: pointer; letter-spacing: 1px;
+    }
+    .replay-btn:hover { opacity: 0.88; }
+
+    @media (max-width: 400px) {
+      .ans-grid.g2, .ans-grid.g4 { grid-template-columns: 1fr; }
+      .stats { grid-template-columns: repeat(3, 1fr); }
+      .stat-n { font-size: 1.4rem; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ═══════════ START ═══════════ -->
+<div id="start" class="screen active">
+  <h1>🏎️ SCIENCE RACE!</h1>
+  <h2>GRADE 6 · WORK &amp; SIMPLE MACHINES</h2>
+  <div class="how-to">
+    <h3>How to Play</h3>
+    <ul>
+      <li>⚡ Answer questions to fuel your car</li>
+      <li>✅ <strong>Correct answer</strong> → your car zooms ahead</li>
+      <li>❌ <strong>Wrong or too slow</strong> → CPU car gets a boost</li>
+      <li>⏱️ Answer <em>faster</em> for a bigger speed boost!</li>
+      <li>🏁 First to the finish line wins!</li>
+    </ul>
+  </div>
+  <button class="start-btn" onclick="startGame()">🏎️ START RACE!</button>
+</div>
+
+<!-- ═══════════ GAME ═══════════ -->
+<div id="game" class="screen">
+  <div class="game-bar">
+    <div class="q-count">Question <span id="q-num">1</span> / 20</div>
+    <div class="game-title-sm">🏎️ SCIENCE RACE</div>
+    <div class="score-pill">⚡ <span id="score-disp">0</span></div>
+  </div>
+
+  <canvas id="track" height="185"></canvas>
+
+  <div class="timer-wrap"><div id="timer-bar"></div></div>
+
+  <div class="q-card">
+    <div class="q-badge" id="q-badge"></div>
+    <div class="q-text"  id="q-text"></div>
+  </div>
+
+  <div class="ans-grid" id="ans-grid"></div>
+  <div id="feedback"></div>
+</div>
+
+<!-- ═══════════ END ═══════════ -->
+<div id="end" class="screen">
+  <div class="end-icon" id="end-icon"></div>
+  <h1 id="end-h1"></h1>
+  <div class="end-sub" id="end-sub"></div>
+  <div class="stats">
+    <div class="stat"><div class="stat-n" id="s-correct"></div><div class="stat-l">Correct</div></div>
+    <div class="stat"><div class="stat-n" id="s-score"></div><div class="stat-l">Score</div></div>
+    <div class="stat"><div class="stat-n" id="s-streak"></div><div class="stat-l">Best Streak</div></div>
+  </div>
+  <button class="replay-btn" onclick="restartGame()">🔄 RACE AGAIN!</button>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+//  QUESTION BANK  (sourced directly from the practice packet)
+// ═══════════════════════════════════════════════════════════════
+const BANK = [
+  // ── TRUE / FALSE ──
+  { kind:'tf', text:'If you push against a wall and it does not move, you have done work on it.',
+    ch:['TRUE','FALSE'], ok:1, exp:'FALSE — no movement means no work. The object must move in the direction of the force!' },
+  { kind:'tf', text:'Work is calculated by multiplying Force times Distance.',
+    ch:['TRUE','FALSE'], ok:0, exp:'TRUE — W = F × d. Both force AND movement in the same direction are required.' },
+  { kind:'tf', text:'A machine with a Mechanical Advantage of 3 means you need 3 times MORE force.',
+    ch:['TRUE','FALSE'], ok:1, exp:'FALSE — MA of 3 means you need 3 times LESS force. Machines multiply your effort!' },
+  { kind:'tf', text:'The input force is the force YOU put into a machine.',
+    ch:['TRUE','FALSE'], ok:0, exp:'TRUE — input = your effort. Output = what the machine applies to the load.' },
+  { kind:'tf', text:'A fixed pulley changes the direction of force but does NOT give you a force advantage.',
+    ch:['TRUE','FALSE'], ok:0, exp:'TRUE — fixed pulleys have MA = 1. Direction changes, but you still need the same amount of force.' },
+  { kind:'tf', text:'Using a ramp means you need less force, but you also travel less distance.',
+    ch:['TRUE','FALSE'], ok:1, exp:'FALSE — less force but MORE distance is the trade-off. Total work stays the same!' },
+  { kind:'tf', text:'In a 1st class lever, the fulcrum is between the effort and the load.',
+    ch:['TRUE','FALSE'], ok:0, exp:'TRUE — Class 1: fulcrum in the MIDDLE. Think seesaw, crowbar, scissors.' },
+  { kind:'tf', text:'A screw is really an inclined plane wrapped around a cylinder.',
+    ch:['TRUE','FALSE'], ok:0, exp:'TRUE — unroll a screw\'s threads and you get a long ramp (inclined plane)!' },
+  { kind:'tf', text:'The total amount of work stays the same whether you use a machine or not.',
+    ch:['TRUE','FALSE'], ok:0, exp:'TRUE — machines spread force over distance, but W = F × d stays the same.' },
+  { kind:'tf', text:'A wheelbarrow is an example of a 3rd class lever.',
+    ch:['TRUE','FALSE'], ok:1, exp:'FALSE — a wheelbarrow is 2nd class. The LOAD sits between the wheel (fulcrum) and the handles.' },
+  // ── MULTIPLE CHOICE ──
+  { kind:'mc', text:'Which of the following is an example of work being done (in the scientific sense)?',
+    ch:['Holding a heavy book still in the air','Pushing a box 3 meters across the floor','Leaning against a tree that doesn\'t move','Squeezing a ball that doesn\'t change shape'],
+    ok:1, exp:'Pushing the box 3 m — force AND motion in the same direction = WORK!' },
+  { kind:'mc', text:'A student pushes a crate with 12 Newtons of force. The crate moves 4 meters. How much work was done?',
+    ch:['3 Joules','16 Joules','48 Joules','48 Newtons'], ok:2,
+    exp:'W = F × d = 12 N × 4 m = 48 Joules! (Note: work is in Joules, not Newtons)' },
+  { kind:'mc', text:'What unit do we use to measure work?',
+    ch:['Newton (N)','Meter (m)','Kilogram (kg)','Joule (J)'], ok:3,
+    exp:'Joule (J)! One Joule = one Newton of force over one meter of distance.' },
+  { kind:'mc', text:'You use a lever with an input force of 10 N and an output force of 40 N. What is the Mechanical Advantage?',
+    ch:['0.25','4','30','400'], ok:1,
+    exp:'MA = Output ÷ Input = 40 N ÷ 10 N = 4. The lever multiplies your force 4×!' },
+  { kind:'mc', text:'Which type of pulley gives you a Mechanical Advantage of 2?',
+    ch:['Fixed pulley','Movable pulley','Block and tackle','Pulleys never help with force'], ok:1,
+    exp:'Movable pulley (attached to the load) — MA = 2, so you only need half the force!' },
+  { kind:'mc', text:'A baseball bat is an example of which class of lever?',
+    ch:['1st class — fulcrum between effort and load','2nd class — load between fulcrum and effort','3rd class — effort between fulcrum and load','It is not a lever'],
+    ok:2, exp:'3rd class! Your hands (effort) are between the grip end (fulcrum) and the ball (load). Gains speed, not force.' },
+  { kind:'mc', text:'Which simple machine is basically two inclined planes placed back to back?',
+    ch:['Pulley','Screw','Wedge','Lever'], ok:2,
+    exp:'A wedge — two inclined planes joined at the thick end, used for splitting or cutting.' },
+  { kind:'mc', text:'What is the trade-off of using an inclined plane (ramp) instead of lifting something straight up?',
+    ch:['More force, shorter distance','Less force, longer distance','Less force, shorter distance','Total work increases'],
+    ok:1, exp:'Less force — but longer distance. Total work (F × d) stays exactly the same!' },
+  { kind:'mc', text:'A doorknob is an example of which simple machine?',
+    ch:['Lever','Pulley','Wheel and Axle','Wedge'], ok:2,
+    exp:'Wheel and Axle! The knob is the large wheel; the shaft is the axle. Turning the big wheel multiplies force at the axle.' },
+  { kind:'mc', text:'Which statement is TRUE about ALL simple machines?',
+    ch:['They always reduce total work done','They always increase speed','They change how force is applied but keep total work the same','They always increase the force needed'],
+    ok:2, exp:'Machines make work EASIER — but they never reduce the total amount of work. W = F × d stays the same!' },
+];
+
+// ═══════════════════════════════════════════════════════════════
+//  GAME STATE
+// ═══════════════════════════════════════════════════════════════
+let qs = [], qIdx = 0;
+let playerPct = 0, cpuPct = 0;
+let score = 0, correct = 0, streak = 0, bestStreak = 0;
+let timeLeft = 12, timerID = null, cpuID = null;
+let picked = false, over = false;
+let rafID = null, roadOff = 0;
+let pBoost = 0, cBoost = 0;
+
+// ═══════════════════════════════════════════════════════════════
+//  CANVAS / DRAWING
+// ═══════════════════════════════════════════════════════════════
+let cv, cx;
+
+function initCanvas() {
+  cv = document.getElementById('track');
+  cv.width  = Math.min(window.innerWidth - 24, 780);
+  cv.height = 185;
+  cx = cv.getContext('2d');
+}
+
+function carX(pct) {
+  return 72 + (pct / 100) * (cv.width - 144);
+}
+
+function drawRoundRect(x, y, w, h, r) {
+  cx.beginPath();
+  cx.moveTo(x+r, y);
+  cx.lineTo(x+w-r, y);
+  cx.arcTo(x+w, y, x+w, y+r, r);
+  cx.lineTo(x+w, y+h-r);
+  cx.arcTo(x+w, y+h, x+w-r, y+h, r);
+  cx.lineTo(x+r, y+h);
+  cx.arcTo(x, y+h, x, y+h-r, r);
+  cx.lineTo(x, y+r);
+  cx.arcTo(x, y, x+r, y, r);
+  cx.closePath();
+}
+
+function drawCar(pct, cy, col, boosting) {
+  const x = carX(pct);
+  const W = 56, H = 26;
+  const bx = x - W/2, by = cy - H/2;
+
+  // Speed streaks
+  if (boosting) {
+    cx.save();
+    cx.strokeStyle = 'rgba(255,255,255,0.35)';
+    cx.lineWidth = 2;
+    cx.setLineDash([10,6]);
+    for (let i = 0; i < 3; i++) {
+      cx.beginPath();
+      cx.moveTo(bx - 12 - i*14, by + 7 + i*5);
+      cx.lineTo(bx - 32 - i*14, by + 7 + i*5);
+      cx.stroke();
+    }
+    cx.restore();
+  }
+
+  // Shadow
+  cx.save();
+  cx.fillStyle = 'rgba(0,0,0,0.28)';
+  cx.beginPath();
+  cx.ellipse(x, by+H+4, W*0.42, 5, 0, 0, Math.PI*2);
+  cx.fill();
+  cx.restore();
+
+  // Body
+  cx.fillStyle = col;
+  drawRoundRect(bx, by+7, W, H-10, 5); cx.fill();
+
+  // Cabin
+  cx.fillStyle = darken(col, 30);
+  drawRoundRect(bx+11, by, W-22, H-8, 4); cx.fill();
+
+  // Windshield
+  cx.fillStyle = 'rgba(160,220,255,0.75)';
+  drawRoundRect(bx+14, by+2, 14, H-13, 3); cx.fill();
+
+  // Rear window
+  cx.fillStyle = 'rgba(160,220,255,0.5)';
+  drawRoundRect(bx+W-23, by+2, 12, H-13, 3); cx.fill();
+
+  // Stripe
+  cx.fillStyle = 'rgba(255,255,255,0.22)';
+  cx.fillRect(bx+9, by+10, W-18, 3);
+
+  // Wheels
+  cx.fillStyle = '#111';
+  [[bx+9, by+H-3],[bx+W-9, by+H-3],[bx+9, by+4],[bx+W-9, by+4]].forEach(([wx,wy]) => {
+    cx.beginPath(); cx.arc(wx, wy, 6, 0, Math.PI*2); cx.fill();
+    cx.fillStyle = '#444';
+    cx.beginPath(); cx.arc(wx, wy, 3, 0, Math.PI*2); cx.fill();
+    cx.fillStyle = '#111';
+  });
+
+  // Headlight
+  cx.fillStyle = '#FFE566';
+  cx.beginPath(); cx.arc(bx+W, by+H*0.35, 3, 0, Math.PI*2); cx.fill();
+}
+
+function darken(hex, amt) {
+  const n = parseInt(hex.replace('#',''),16);
+  const r = Math.max(0,(n>>16)-amt), g = Math.max(0,((n>>8)&0xff)-amt), b = Math.max(0,(n&0xff)-amt);
+  return '#'+((1<<24)|(r<<16)|(g<<8)|b).toString(16).slice(1);
+}
+
+function drawFrame() {
+  roadOff += 1.4;
+  const w = cv.width, h = cv.height;
+
+  // Sky bg
+  cx.fillStyle = '#1a1a2e'; cx.fillRect(0,0,w,h);
+
+  // Grass
+  cx.fillStyle = '#1e4d1e';
+  cx.fillRect(0,0,w,26); cx.fillRect(0,h-26,w,26);
+
+  // Road
+  cx.fillStyle = '#28292f'; cx.fillRect(0,26,w,h-52);
+
+  // Road borders
+  cx.strokeStyle = '#FFD700'; cx.lineWidth=3; cx.setLineDash([]);
+  cx.beginPath(); cx.moveTo(0,26); cx.lineTo(w,26); cx.stroke();
+  cx.beginPath(); cx.moveTo(0,h-26); cx.lineTo(w,h-26); cx.stroke();
+
+  // Center dashes
+  cx.strokeStyle='rgba(255,255,255,0.45)'; cx.lineWidth=3;
+  cx.setLineDash([28,18]); cx.lineDashOffset = -(roadOff%46);
+  cx.beginPath(); cx.moveTo(0,h/2); cx.lineTo(w,h/2); cx.stroke();
+  cx.setLineDash([]);
+
+  // Finish line (appears when leader > 72%)
+  if (playerPct > 72 || cpuPct > 72) {
+    const fx = carX(100);
+    const tile = 10, rows = Math.floor((h-52)/tile), cols = 3;
+    for (let r=0;r<rows;r++) for (let c=0;c<cols;c++) {
+      cx.fillStyle = (r+c)%2===0 ? '#fff' : '#111';
+      cx.fillRect(fx + c*tile, 26 + r*tile, tile, tile);
+    }
+  }
+
+  // Cars
+  drawCar(cpuPct,    h*0.28, '#f39c12', cBoost>0);
+  drawCar(playerPct, h*0.72, '#e74c3c', pBoost>0);
+
+  // Lane labels
+  cx.font = 'bold 11px Arial'; cx.textAlign = 'left';
+  cx.fillStyle = '#ddd'; cx.fillText('CPU', 5, h*0.28+5);
+  cx.fillStyle = '#FFD700'; cx.fillText('YOU', 5, h*0.72+5);
+
+  // Start marker
+  cx.fillStyle = 'rgba(255,255,255,0.2)';
+  cx.fillRect(carX(0)-2, 26, 3, h-52);
+
+  if (pBoost>0) pBoost--;
+  if (cBoost>0) cBoost--;
+}
+
+function loop() {
+  drawFrame();
+  if (!over) rafID = requestAnimationFrame(loop);
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  AUDIO
+// ═══════════════════════════════════════════════════════════════
+function beep(type) {
+  try {
+    const ac = new (window.AudioContext || window.webkitAudioContext)();
+    const play = (freq, start, dur, vol=0.2) => {
+      const o = ac.createOscillator(), g = ac.createGain();
+      o.connect(g); g.connect(ac.destination);
+      o.frequency.value = freq;
+      g.gain.setValueAtTime(vol, ac.currentTime+start);
+      g.gain.exponentialRampToValueAtTime(0.001, ac.currentTime+start+dur);
+      o.start(ac.currentTime+start); o.stop(ac.currentTime+start+dur);
+    };
+    if (type==='ok')  { play(523,0,0.1); play(659,0.1,0.1); play(784,0.2,0.2); }
+    if (type==='bad') { play(330,0,0.1); play(220,0.1,0.25); }
+    if (type==='win') { [523,659,784,1047].forEach((f,i)=>play(f,i*0.13,0.25)); }
+    if (type==='lose'){ play(440,0,0.15); play(330,0.15,0.15); play(220,0.3,0.35); }
+  } catch(e) {}
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  GAME LOGIC
+// ═══════════════════════════════════════════════════════════════
+function shuffle(a) {
+  for (let i=a.length-1;i>0;i--) { const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; }
+  return a;
+}
+
+function startGame() {
+  qs = shuffle([...BANK]);
+  qIdx=0; playerPct=0; cpuPct=0;
+  score=0; correct=0; streak=0; bestStreak=0;
+  picked=false; over=false;
+  show('game');
+  initCanvas();
+  loop();
+  nextQ();
+}
+
+function nextQ() {
+  if (qIdx >= qs.length) { finish(playerPct>cpuPct?'p':cpuPct>playerPct?'c':'tie'); return; }
+  const q = qs[qIdx];
+  picked = false;
+  timeLeft = 12;
+
+  document.getElementById('q-num').textContent = qIdx+1;
+  document.getElementById('score-disp').textContent = score;
+  document.getElementById('q-badge').textContent = q.kind==='tf' ? '✅ True or False' : '🔵 Multiple Choice';
+  document.getElementById('q-text').textContent = q.text;
+
+  const grid = document.getElementById('ans-grid');
+  grid.innerHTML = '';
+  grid.className = 'ans-grid ' + (q.kind==='tf' ? 'g2' : 'g4');
+  const lbls = q.kind==='tf' ? ['T','F'] : ['A','B','C','D'];
+  q.ch.forEach((c,i) => {
+    const btn = document.createElement('button');
+    btn.className = 'ans-btn';
+    btn.innerHTML = `<span class="lbl">${lbls[i]}</span>${c}`;
+    btn.onclick = () => pick(i);
+    grid.appendChild(btn);
+  });
+
+  const fb = document.getElementById('feedback');
+  fb.className = ''; fb.textContent = '';
+
+  setTimerBar(1);
+  clearInterval(timerID);
+  timerID = setInterval(() => {
+    timeLeft--;
+    setTimerBar(timeLeft/12);
+    if (timeLeft<=0) { clearInterval(timerID); if(!picked) timeout(); }
+  }, 1000);
+
+  // CPU answers at a random moment
+  clearTimeout(cpuID);
+  const cpuWin = Math.random() < 0.65;
+  cpuID = setTimeout(() => { if (!picked && !over) cpuAutoMove(cpuWin); }, 1800 + Math.random()*5500);
+}
+
+function setTimerBar(frac) {
+  const bar = document.getElementById('timer-bar');
+  bar.style.width = (frac*100)+'%';
+  bar.style.background = frac>0.6 ? '#27ae60' : frac>0.3 ? '#f39c12' : '#e74c3c';
+}
+
+function pick(i) {
+  if (picked || over) return;
+  picked = true;
+  clearInterval(timerID); clearTimeout(cpuID);
+
+  const q = qs[qIdx];
+  const isOk = i === q.ok;
+  const btns = document.querySelectorAll('.ans-btn');
+  btns.forEach(b=>b.disabled=true);
+  btns[i].classList.add(isOk ? 'correct' : 'wrong');
+  if (!isOk) btns[q.ok].classList.add('correct');
+
+  const fb = document.getElementById('feedback');
+  if (isOk) {
+    const pts = timeLeft>=9 ? 150 : timeLeft>=6 ? 120 : timeLeft>=3 ? 100 : 80;
+    const boost = timeLeft>=9 ? 7 : timeLeft>=5 ? 6 : 5;
+    playerPct = Math.min(100, playerPct+boost);
+    pBoost = 22;
+    score += pts;
+    correct++;
+    streak++;
+    bestStreak = Math.max(bestStreak, streak);
+    document.getElementById('score-disp').textContent = score;
+    fb.textContent = '✅ Correct! +'+pts+' pts · Your car surges forward!'+(streak>=3?' 🔥 '+streak+' in a row!':'');
+    fb.className = 'show ok';
+    beep('ok');
+  } else {
+    cpuPct = Math.min(100, cpuPct+4);
+    cBoost = 22;
+    streak = 0;
+    fb.textContent = '❌ '+q.exp;
+    fb.className = 'show bad';
+    beep('bad');
+  }
+
+  if (playerPct>=100) { setTimeout(()=>finish('p'),1300); return; }
+  if (cpuPct   >=100) { setTimeout(()=>finish('c'),1300); return; }
+  setTimeout(advance, 2100);
+}
+
+function cpuAutoMove(wins) {
+  if (picked || over) return;
+  if (wins) { cpuPct = Math.min(100,cpuPct+4); cBoost=22; }
+  if (cpuPct>=100 && !over) { picked=true; clearInterval(timerID); setTimeout(()=>finish('c'),800); }
+}
+
+function timeout() {
+  if (picked||over) return;
+  picked=true; clearTimeout(cpuID);
+  const q = qs[qIdx];
+  const btns = document.querySelectorAll('.ans-btn');
+  btns.forEach(b=>b.disabled=true);
+  btns[q.ok].classList.add('correct');
+  cpuPct = Math.min(100,cpuPct+4); cBoost=22; streak=0;
+  const fb=document.getElementById('feedback');
+  fb.textContent='⏰ Time\'s up! '+q.exp;
+  fb.className='show bad';
+  beep('bad');
+  if (cpuPct>=100) { setTimeout(()=>finish('c'),1300); return; }
+  setTimeout(advance, 2100);
+}
+
+function advance() { qIdx++; nextQ(); }
+
+function finish(who) {
+  if (over) return;
+  over = true;
+  clearInterval(timerID); clearTimeout(cpuID);
+  setTimeout(()=>{ cancelAnimationFrame(rafID); showEnd(who); }, 1400);
+}
+
+function showEnd(who) {
+  show('end');
+  let icon, h1, sub;
+  const pct = Math.round((correct/qs.length)*100);
+  const grade = pct>=90?'🌟 You know this material cold — test day is going to be easy!':
+                pct>=75?'Great work! Review a couple tricky spots and you\'re set.':
+                pct>=55?'Good effort! Spend extra time on formulas and machine trade-offs.':
+                        'Keep practicing! Open the Formula Sheet in the Jeopardy game and try again.';
+
+  if (who==='p')   { icon='🏆'; h1='YOU WIN!';        sub='You crossed the finish line first! Science champion! '+grade; beep('win'); }
+  else if(who==='c'){ icon='😤'; h1='SO CLOSE!';       sub='The CPU edged you out this time — race again to crush it! '+grade; beep('lose'); }
+  else             { icon='🤝'; h1="IT'S A TIE!";     sub='Neck and neck! Great race — play again to settle it. '+grade; beep('ok'); }
+
+  document.getElementById('end-icon').textContent=icon;
+  document.getElementById('end-h1').textContent=h1;
+  document.getElementById('end-sub').textContent=sub;
+  document.getElementById('s-correct').textContent=correct+'/'+qs.length;
+  document.getElementById('s-score').textContent=score;
+  document.getElementById('s-streak').textContent=bestStreak;
+}
+
+function restartGame() { cancelAnimationFrame(rafID); startGame(); }
+
+function show(id) {
+  ['start','game','end'].forEach(s=>{
+    const el=document.getElementById(s);
+    el.className='screen'+(s===id?' active':'');
+  });
+}
+
+window.addEventListener('resize', ()=>{
+  if (document.getElementById('game').classList.contains('active')) initCanvas();
+});
+</script>
+</body>
+</html>
