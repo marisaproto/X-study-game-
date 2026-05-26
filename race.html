@@ -78,9 +78,6 @@
     /* ── CANVAS ── */
     #track { display: block; width: 100%; border-radius: 10px; }
 
-    /* ── TIMER BAR ── */
-    .timer-wrap { width: 100%; height: 7px; background: rgba(255,255,255,0.1); border-radius: 6px; margin: 7px 0; overflow: hidden; }
-    #timer-bar { height: 100%; width: 100%; border-radius: 6px; background: #27ae60; transition: background 0.4s; }
 
     /* ── QUESTION CARD ── */
     .q-card {
@@ -184,7 +181,7 @@
       <li>⚡ Answer questions to fuel your car</li>
       <li>✅ <strong>Correct answer</strong> → your car zooms ahead</li>
       <li>❌ <strong>Wrong or too slow</strong> → CPU car gets a boost</li>
-      <li>⏱️ Answer <em>faster</em> for a bigger speed boost!</li>
+      <li>🤔 Take your time — no timer on your answers!</li>
       <li>🏁 First to the finish line wins!</li>
     </ul>
   </div>
@@ -200,8 +197,6 @@
   </div>
 
   <canvas id="track" height="185"></canvas>
-
-  <div class="timer-wrap"><div id="timer-bar"></div></div>
 
   <div class="q-card">
     <div class="q-badge" id="q-badge"></div>
@@ -290,7 +285,7 @@ const BANK = [
 let qs = [], qIdx = 0;
 let playerPct = 0, cpuPct = 0;
 let score = 0, correct = 0, streak = 0, bestStreak = 0;
-let timeLeft = 12, timerID = null, cpuID = null;
+let cpuID = null;
 let picked = false, over = false;
 let rafID = null, roadOff = 0;
 let pBoost = 0, cBoost = 0;
@@ -494,7 +489,6 @@ function nextQ() {
   if (qIdx >= qs.length) { finish(playerPct>cpuPct?'p':cpuPct>playerPct?'c':'tie'); return; }
   const q = qs[qIdx];
   picked = false;
-  timeLeft = 12;
 
   document.getElementById('q-num').textContent = qIdx+1;
   document.getElementById('score-disp').textContent = score;
@@ -516,30 +510,16 @@ function nextQ() {
   const fb = document.getElementById('feedback');
   fb.className = ''; fb.textContent = '';
 
-  setTimerBar(1);
-  clearInterval(timerID);
-  timerID = setInterval(() => {
-    timeLeft--;
-    setTimerBar(timeLeft/12);
-    if (timeLeft<=0) { clearInterval(timerID); if(!picked) timeout(); }
-  }, 1000);
-
-  // CPU answers at a random moment
+  // CPU advances on its own schedule (keeps the race competitive)
   clearTimeout(cpuID);
   const cpuWin = Math.random() < 0.65;
-  cpuID = setTimeout(() => { if (!picked && !over) cpuAutoMove(cpuWin); }, 1800 + Math.random()*5500);
-}
-
-function setTimerBar(frac) {
-  const bar = document.getElementById('timer-bar');
-  bar.style.width = (frac*100)+'%';
-  bar.style.background = frac>0.6 ? '#27ae60' : frac>0.3 ? '#f39c12' : '#e74c3c';
+  cpuID = setTimeout(() => { if (!picked && !over) cpuAutoMove(cpuWin); }, 3000 + Math.random()*6000);
 }
 
 function pick(i) {
   if (picked || over) return;
   picked = true;
-  clearInterval(timerID); clearTimeout(cpuID);
+  clearTimeout(cpuID);
 
   const q = qs[qIdx];
   const isOk = i === q.ok;
@@ -550,16 +530,14 @@ function pick(i) {
 
   const fb = document.getElementById('feedback');
   if (isOk) {
-    const pts = timeLeft>=9 ? 150 : timeLeft>=6 ? 120 : timeLeft>=3 ? 100 : 80;
-    const boost = timeLeft>=9 ? 7 : timeLeft>=5 ? 6 : 5;
-    playerPct = Math.min(100, playerPct+boost);
+    playerPct = Math.min(100, playerPct+6);
     pBoost = 22;
-    score += pts;
+    score += 100;
     correct++;
     streak++;
     bestStreak = Math.max(bestStreak, streak);
     document.getElementById('score-disp').textContent = score;
-    fb.textContent = '✅ Correct! +'+pts+' pts · Your car surges forward!'+(streak>=3?' 🔥 '+streak+' in a row!':'');
+    fb.textContent = '✅ Correct! +100 pts · Your car surges forward!'+(streak>=3?' 🔥 '+streak+' in a row!':'');
     fb.className = 'show ok';
     beep('ok');
   } else {
@@ -579,23 +557,7 @@ function pick(i) {
 function cpuAutoMove(wins) {
   if (picked || over) return;
   if (wins) { cpuPct = Math.min(100,cpuPct+4); cBoost=22; }
-  if (cpuPct>=100 && !over) { picked=true; clearInterval(timerID); setTimeout(()=>finish('c'),800); }
-}
-
-function timeout() {
-  if (picked||over) return;
-  picked=true; clearTimeout(cpuID);
-  const q = qs[qIdx];
-  const btns = document.querySelectorAll('.ans-btn');
-  btns.forEach(b=>b.disabled=true);
-  btns[q.ok].classList.add('correct');
-  cpuPct = Math.min(100,cpuPct+4); cBoost=22; streak=0;
-  const fb=document.getElementById('feedback');
-  fb.textContent='⏰ Time\'s up! '+q.exp;
-  fb.className='show bad';
-  beep('bad');
-  if (cpuPct>=100) { setTimeout(()=>finish('c'),1300); return; }
-  setTimeout(advance, 2100);
+  if (cpuPct>=100 && !over) { picked=true; setTimeout(()=>finish('c'),800); }
 }
 
 function advance() { qIdx++; nextQ(); }
@@ -603,7 +565,7 @@ function advance() { qIdx++; nextQ(); }
 function finish(who) {
   if (over) return;
   over = true;
-  clearInterval(timerID); clearTimeout(cpuID);
+  clearTimeout(cpuID);
   setTimeout(()=>{ cancelAnimationFrame(rafID); showEnd(who); }, 1400);
 }
 
